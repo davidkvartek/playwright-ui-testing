@@ -1,50 +1,38 @@
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import expect
 
-BASE_URL = "https://www.saucedemo.com/"
+from pages.cart_page import CartPage
+from pages.checkout_page import CheckoutPage
+from pages.inventory_page import InventoryPage
 
 
-def test_checkout_completes_for_single_product(page: Page) -> None:
-    page.goto(BASE_URL)
+def test_checkout_completes_for_single_product(logged_in: InventoryPage) -> None:
+    page = logged_in.page
 
-    page.locator('[data-test="username"]').fill("standard_user")
-    page.locator('[data-test="password"]').fill("secret_sauce")
-    page.locator('[data-test="login-button"]').click()
+    logged_in.add_to_cart("sauce-labs-backpack")
+    logged_in.cart_link.click()
+    CartPage(page).checkout()
 
-    page.locator('[data-test="add-to-cart-sauce-labs-backpack"]').click()
-    page.locator('[data-test="shopping-cart-link"]').click()
-    page.locator('[data-test="checkout"]').click()
+    checkout = CheckoutPage(page)
+    checkout.fill_details("David", "Tester", "34994")
+    checkout.continue_to_overview()
+    checkout.finish()
 
-    page.locator('[data-test="firstName"]').fill("David")
-    page.locator('[data-test="lastName"]').fill("Tester")
-    page.locator('[data-test="postalCode"]').fill("34994")
-    page.locator('[data-test="continue"]').click()
-
-    page.locator('[data-test="finish"]').click()
-
-    expect(page.locator('[data-test="complete-header"]')).to_have_text(
-        "Thank you for your order!"
-    )
+    expect(checkout.complete_header).to_have_text("Thank you for your order!")
     expect(page).to_have_url(re.compile(r"/checkout-complete\.html$"))
 
 
-def test_checkout_requires_postal_code(page: Page) -> None:
-    page.goto(BASE_URL)
+def test_checkout_requires_postal_code(logged_in: InventoryPage) -> None:
+    page = logged_in.page
 
-    page.locator('[data-test="username"]').fill("standard_user")
-    page.locator('[data-test="password"]').fill("secret_sauce")
-    page.locator('[data-test="login-button"]').click()
+    logged_in.add_to_cart("sauce-labs-backpack")
+    logged_in.cart_link.click()
+    CartPage(page).checkout()
 
-    page.locator('[data-test="add-to-cart-sauce-labs-backpack"]').click()
-    page.locator('[data-test="shopping-cart-link"]').click()
-    page.locator('[data-test="checkout"]').click()
+    checkout = CheckoutPage(page)
+    checkout.fill_details("David", "Tester")
+    checkout.continue_to_overview()
 
-    page.locator('[data-test="firstName"]').fill("David")
-    page.locator('[data-test="lastName"]').fill("Tester")
-    page.locator('[data-test="continue"]').click()
-
-    expect(page.locator('[data-test="error"]')).to_contain_text(
-        "Error: Postal Code is required"
-    )
+    expect(checkout.error).to_contain_text("Error: Postal Code is required")
     expect(page).to_have_url(re.compile(r"/checkout-step-one\.html$"))
