@@ -25,8 +25,23 @@ def test_standard_user_can_log_in(page: Page) -> None:
             "Username and password do not match any user in this service",
         ),
         ("locked_out_user", "secret_sauce", "Sorry, this user has been locked out"),
+        ("", "", "Username is required"),
+        ("standard_user", "", "Password is required"),
+        ("", "secret_sauce", "Username is required"),
+        (
+            "no_such_user",
+            "secret_sauce",
+            "Username and password do not match any user in this service",
+        ),
     ],
-    ids=["wrong-password", "locked-out"],
+    ids=[
+        "wrong-password",
+        "locked-out",
+        "empty-both",
+        "empty-password",
+        "empty-username",
+        "unknown-user",
+    ],
 )
 def test_invalid_login_shows_error_and_stays_on_login(
     page: Page, user: str, pwd: str, expected_error: str
