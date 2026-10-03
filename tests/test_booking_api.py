@@ -43,6 +43,8 @@ def test_delete_without_token_is_rejected():
 @pytest.mark.api
 def test_delete_with_token_succeeds():
     auth = requests.post(f"{BASE}/auth", json={"username": "admin", "password": "password123"}, timeout=30)
+    assert auth.status_code == 200
+    assert "token" in auth.json()
     token = auth.json()["token"]
     created = requests.post(f"{BASE}/booking", json=NEW_BOOKING, headers=HEADERS, timeout=30)
     booking_id = created.json()["bookingid"]
@@ -50,3 +52,25 @@ def test_delete_with_token_succeeds():
     r = requests.delete(f"{BASE}/booking/{booking_id}", cookies={"token": token}, timeout=30)
     assert r.status_code == 201
     assert requests.get(f"{BASE}/booking/{booking_id}", timeout=30).status_code == 404
+
+
+@pytest.mark.api
+@pytest.mark.parametrize(
+    "payload",
+    [
+        pytest.param({"username": "admin", "password": "wrong"}, id="wrong-password"),
+        pytest.param({}, id="empty-body"),
+    ],
+)
+def test_auth_rejects_bad_credentials(payload):
+    """Failed authentication returns HTTP 200 instead of 401.
+
+    A 200 on failed authentication is a defect finding, the same pattern as
+    BUG-001: this test asserts the status code the API actually returns.
+    """
+    r = requests.post(f"{BASE}/auth", json=payload, timeout=30)
+    assert r.status_code == 200
+    assert "application/json" in r.headers["Content-Type"]
+    assert r.json() == {"reason": "Bad credentials"}
+    assert "token" not in r.json()
+    
