@@ -51,3 +51,15 @@ def test_invalid_login_shows_error_and_stays_on_login(
 
     expect(login_page.error).to_contain_text(expected_error)
     expect(page).to_have_url(LoginPage.URL)
+
+
+def test_inventory_requires_login(page: Page) -> None:
+    page.goto(LoginPage.URL + "inventory.html")
+
+    login_page = LoginPage(page)
+    expect(page).to_have_url(LoginPage.URL)
+    expect(login_page.error).to_contain_text(
+        "You can only access '/inventory.html' when you are logged in."
+    )
+    expect(login_page.login_button).to_be_visible()
+    expect(InventoryPage(page).items).to_have_count(0)
