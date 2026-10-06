@@ -2,6 +2,11 @@ import pytest
 from pages.login_page import LoginPage
 from pages.inventory_page import InventoryPage
 
+# Captured 2026-10-06 by logging in as standard_user and reading
+# InventoryPage.price_values() with no sort applied, which returned
+# [29.99, 9.99, 15.99, 49.99, 7.99, 15.99]. This is that list sorted ascending.
+EXPECTED_LOHI_PRICES = [7.99, 9.99, 15.99, 15.99, 29.99, 49.99]
+
 
 @pytest.mark.ui
 @pytest.mark.parametrize(
@@ -23,4 +28,9 @@ def test_price_sort_for_each_user(page, user):
     inventory.sort_by("lohi")
     prices = inventory.price_values()
 
-    assert prices == sorted(prices), f"Prices not sorted: {prices}"
+    assert len(prices) == len(EXPECTED_LOHI_PRICES), (
+        f"Expected {len(EXPECTED_LOHI_PRICES)} products, found {len(prices)}: {prices}"
+    )
+    assert prices == EXPECTED_LOHI_PRICES, (
+        f"Prices not in expected low-to-high order: {prices}"
+    )
