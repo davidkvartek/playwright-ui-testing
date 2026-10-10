@@ -1,5 +1,6 @@
 import re
 
+import pytest
 from playwright.sync_api import expect
 
 from pages.cart_page import CartPage
@@ -32,7 +33,18 @@ def test_checkout_completes_for_single_product(logged_in: InventoryPage) -> None
     expect(page).to_have_url(re.compile(r"/checkout-complete\.html$"))
 
 
-def test_checkout_requires_postal_code(logged_in: InventoryPage) -> None:
+@pytest.mark.parametrize(
+    ("first", "last", "postal", "expected_error"),
+    [
+        pytest.param("", "Tester", "34994", "Error: First Name is required", id="blank-first-name"),
+        pytest.param("David", "", "34994", "Error: Last Name is required", id="blank-last-name"),
+        pytest.param("David", "Tester", "", "Error: Postal Code is required", id="blank-postal-code"),
+        pytest.param("", "", "", "Error: First Name is required", id="all-blank"),
+    ],
+)
+def test_checkout_requires_details(
+    logged_in: InventoryPage, first: str, last: str, postal: str, expected_error: str
+) -> None:
     page = logged_in.page
 
     logged_in.add_to_cart("sauce-labs-backpack")
@@ -40,8 +52,8 @@ def test_checkout_requires_postal_code(logged_in: InventoryPage) -> None:
     CartPage(page).checkout()
 
     checkout = CheckoutPage(page)
-    checkout.fill_details("David", "Tester")
+    checkout.fill_details(first, last, postal)
     checkout.continue_to_overview()
 
-    expect(checkout.error).to_contain_text("Error: Postal Code is required")
+    expect(checkout.error).to_contain_text(expected_error)
     expect(page).to_have_url(re.compile(r"/checkout-step-one\.html$"))
