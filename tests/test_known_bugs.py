@@ -1,4 +1,10 @@
+import re
+
 import pytest
+from playwright.sync_api import expect
+
+from pages.cart_page import CartPage
+from pages.checkout_page import CheckoutPage
 from pages.login_page import LoginPage
 from pages.inventory_page import InventoryPage
 
@@ -34,3 +40,24 @@ def test_price_sort_for_each_user(page, user):
     assert prices == EXPECTED_LOHI_PRICES, (
         f"Prices not in expected low-to-high order: {prices}"
     )
+
+
+@pytest.mark.ui
+@pytest.mark.xfail(reason="BUG-002: checkout accepts a blank last name for error_user", strict=True)
+def test_checkout_requires_last_name_for_error_user(page):
+    LoginPage(page).open().login("error_user", "secret_sauce")
+
+    inventory = InventoryPage(page)
+    inventory.add_to_cart("sauce-labs-backpack")
+    inventory.cart_link.click()
+
+    cart = CartPage(page)
+    expect(cart.item_names).to_have_text(["Sauce Labs Backpack"])
+    cart.checkout()
+
+    checkout = CheckoutPage(page)
+    checkout.fill_details("David", "", "34994")
+    checkout.continue_to_overview()
+
+    expect(checkout.error).to_contain_text("Error: Last Name is required")
+    expect(page).to_have_url(re.compile(r"/checkout-step-one\.html$"))
